@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.library.mapper.StatisticsMapper">
+
+    <select id="countBooksByCategory" resultType="com.example.library.vo.CategoryBookCountVO">
+        SELECT
+            t.type_id,
+            t.type_name,
+            COUNT(b.book_id) AS book_count
+        FROM book_type t
+        LEFT JOIN book b ON t.type_id = b.type_id
+        GROUP BY t.type_id, t.type_name
+        ORDER BY book_count DESC, t.type_id
+    </select>
+
+    <select id="selectOverdueRecords" resultType="com.example.library.vo.BorrowRecordVO">
+        SELECT
+            br.borrow_id,
+            br.user_id,
+            u.user_no,
+            u.user_name,
+            br.book_id,
+            b.book_name,
+            b.isbn,
+            br.borrow_time,
+            br.due_return_time,
+            br.actual_return_time,
+            br.borrow_status,
+            CASE br.borrow_status
+                WHEN 0 THEN 'not_returned'
+                WHEN 1 THEN 'returned'
+                WHEN 2 THEN 'overdue'
+            END AS borrow_status_text,
+            DATEDIFF(CURRENT_DATE, DATE(br.due_return_time)) AS overdue_days
+        FROM borrow_record br
+        JOIN sys_user u ON br.user_id = u.user_id
+        JOIN book b ON br.book_id = b.book_id
+        WHERE br.borrow_status IN (0, 2)
+          AND br.actual_return_time IS NULL
+          AND br.due_return_time &lt; CURRENT_TIMESTAMP
+        ORDER BY overdue_days DESC, br.due_return_time
+    </select>
+
+    <select id="countBorrowsByCategory" resultType="com.example.library.vo.CategoryBorrowCountVO">
+        SELECT
+            t.type_id,
+            t.type_name,
+            COUNT(br.borrow_id) AS borrow_count
+        FROM borrow_record br
+        JOIN book b ON br.book_id = b.book_id
+        JOIN book_type t ON b.type_id = t.type_id
+        GROUP BY t.type_id, t.type_name
+        ORDER BY borrow_count DESC, t.type_id
+    </select>
+</mapper>

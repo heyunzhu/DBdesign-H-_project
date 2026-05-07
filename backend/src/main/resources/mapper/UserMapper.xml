@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.library.mapper.UserMapper">
+
+    <select id="selectUsers" resultType="com.example.library.vo.UserVO">
+        SELECT
+            u.user_id,
+            u.user_no,
+            u.user_name,
+            u.phone,
+            u.dept_name,
+            u.register_time,
+            u.account_status,
+            CASE u.account_status
+                WHEN 0 THEN 'disabled'
+                WHEN 1 THEN 'normal'
+            END AS account_status_text,
+            u.role_id,
+            r.role_name
+        FROM sys_user u
+        JOIN sys_role r ON u.role_id = r.role_id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    u.user_no LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.user_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.phone LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.dept_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="roleId != null">
+                AND u.role_id = #{roleId}
+            </if>
+            <if test="status != null">
+                AND u.account_status = #{status}
+            </if>
+        </where>
+        ORDER BY u.user_id DESC
+    </select>
+
+    <select id="selectUserById" resultType="com.example.library.vo.UserVO">
+        SELECT
+            u.user_id,
+            u.user_no,
+            u.user_name,
+            u.phone,
+            u.dept_name,
+            u.register_time,
+            u.account_status,
+            CASE u.account_status
+                WHEN 0 THEN 'disabled'
+                WHEN 1 THEN 'normal'
+            END AS account_status_text,
+            u.role_id,
+            r.role_name
+        FROM sys_user u
+        JOIN sys_role r ON u.role_id = r.role_id
+        WHERE u.user_id = #{userId}
+    </select>
+
+    <select id="selectUserEntityById" resultType="com.example.library.entity.SysUser">
+        SELECT
+            user_id,
+            user_no,
+            user_name,
+            phone,
+            dept_name,
+            register_time,
+            account_status,
+            role_id
+        FROM sys_user
+        WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insertUser" parameterType="com.example.library.entity.SysUser" useGeneratedKeys="true" keyProperty="userId">
+        INSERT INTO sys_user (
+            user_no,
+            user_name,
+            phone,
+            dept_name,
+            account_status,
+            role_id
+        ) VALUES (
+            #{userNo},
+            #{userName},
+            #{phone},
+            #{deptName},
+            #{accountStatus},
+            #{roleId}
+        )
+    </insert>
+
+    <update id="updateUser" parameterType="com.example.library.entity.SysUser">
+        UPDATE sys_user
+        SET
+            user_no = #{userNo},
+            user_name = #{userName},
+            phone = #{phone},
+            dept_name = #{deptName},
+            account_status = #{accountStatus},
+            role_id = #{roleId}
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateUserStatus">
+        UPDATE sys_user
+        SET account_status = #{accountStatus}
+        WHERE user_id = #{userId}
+    </update>
+</mapper>

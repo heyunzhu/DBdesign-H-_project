@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.library.mapper.BookMapper">
+
+    <select id="selectBooks" resultType="com.example.library.vo.BookDetailVO">
+        SELECT
+            b.book_id,
+            b.isbn,
+            b.book_name,
+            b.author_id,
+            a.author_name,
+            b.type_id,
+            t.type_name,
+            b.publisher,
+            b.publish_date,
+            b.book_status,
+            CASE b.book_status
+                WHEN 0 THEN 'available'
+                WHEN 1 THEN 'borrowed'
+                WHEN 2 THEN 'disabled'
+            END AS book_status_text
+        FROM book b
+        JOIN author a ON b.author_id = a.author_id
+        JOIN book_type t ON b.type_id = t.type_id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    b.book_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR b.isbn LIKE CONCAT('%', #{keyword}, '%')
+                    OR a.author_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="status != null">
+                AND b.book_status = #{status}
+            </if>
+        </where>
+        ORDER BY b.book_id DESC
+    </select>
+
+    <select id="selectBookById" resultType="com.example.library.vo.BookDetailVO">
+        SELECT
+            b.book_id,
+            b.isbn,
+            b.book_name,
+            b.author_id,
+            a.author_name,
+            b.type_id,
+            t.type_name,
+            b.publisher,
+            b.publish_date,
+            b.book_status,
+            CASE b.book_status
+                WHEN 0 THEN 'available'
+                WHEN 1 THEN 'borrowed'
+                WHEN 2 THEN 'disabled'
+            END AS book_status_text
+        FROM book b
+        JOIN author a ON b.author_id = a.author_id
+        JOIN book_type t ON b.type_id = t.type_id
+        WHERE b.book_id = #{bookId}
+    </select>
+
+    <insert id="insertBook" parameterType="com.example.library.entity.Book" useGeneratedKeys="true" keyProperty="bookId">
+        INSERT INTO book (
+            isbn,
+            book_name,
+            author_id,
+            type_id,
+            publisher,
+            publish_date,
+            book_status
+        ) VALUES (
+            #{isbn},
+            #{bookName},
+            #{authorId},
+            #{typeId},
+            #{publisher},
+            #{publishDate},
+            #{bookStatus}
+        )
+    </insert>
+
+    <update id="updateBook" parameterType="com.example.library.entity.Book">
+        UPDATE book
+        SET
+            isbn = #{isbn},
+            book_name = #{bookName},
+            author_id = #{authorId},
+            type_id = #{typeId},
+            publisher = #{publisher},
+            publish_date = #{publishDate},
+            book_status = #{bookStatus}
+        WHERE book_id = #{bookId}
+    </update>
+
+    <update id="updateBookStatus">
+        UPDATE book
+        SET book_status = #{bookStatus}
+        WHERE book_id = #{bookId}
+    </update>
+</mapper>
