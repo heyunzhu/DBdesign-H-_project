@@ -41,6 +41,64 @@
         ORDER BY u.user_id DESC
     </select>
 
+    <select id="selectUsersPage" resultType="com.example.library.vo.UserVO">
+        SELECT
+            u.user_id,
+            u.user_no,
+            u.user_name,
+            u.phone,
+            u.dept_name,
+            u.register_time,
+            u.account_status,
+            CASE u.account_status
+                WHEN 0 THEN 'disabled'
+                WHEN 1 THEN 'normal'
+            END AS account_status_text,
+            u.role_id,
+            r.role_name
+        FROM sys_user u
+        JOIN sys_role r ON u.role_id = r.role_id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    u.user_no LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.user_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.phone LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.dept_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="roleId != null">
+                AND u.role_id = #{roleId}
+            </if>
+            <if test="status != null">
+                AND u.account_status = #{status}
+            </if>
+        </where>
+        ORDER BY u.user_id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countUsers" resultType="long">
+        SELECT COUNT(*)
+        FROM sys_user u
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    u.user_no LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.user_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.phone LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.dept_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="roleId != null">
+                AND u.role_id = #{roleId}
+            </if>
+            <if test="status != null">
+                AND u.account_status = #{status}
+            </if>
+        </where>
+    </select>
+
     <select id="selectUserById" resultType="com.example.library.vo.UserVO">
         SELECT
             u.user_id,

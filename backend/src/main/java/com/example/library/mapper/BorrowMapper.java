@@ -11,6 +11,13 @@ public interface BorrowMapper {
 
     List<BorrowRecordVO> selectBorrowRecords(@Param("userId") Integer userId, @Param("status") Integer status);
 
+    List<BorrowRecordVO> selectBorrowRecordsPage(@Param("userId") Integer userId,
+                                                 @Param("status") Integer status,
+                                                 @Param("offset") Integer offset,
+                                                 @Param("pageSize") Integer pageSize);
+
+    long countBorrowRecords(@Param("userId") Integer userId, @Param("status") Integer status);
+
     BorrowRecord selectBorrowRecordById(@Param("borrowId") Integer borrowId);
 
     int insertBorrowRecord(BorrowRecord borrowRecord);

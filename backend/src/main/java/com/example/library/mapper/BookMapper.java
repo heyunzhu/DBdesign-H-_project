@@ -10,6 +10,13 @@ public interface BookMapper {
 
     List<BookDetailVO> selectBooks(@Param("keyword") String keyword, @Param("status") Integer status);
 
+    List<BookDetailVO> selectBooksPage(@Param("keyword") String keyword,
+                                       @Param("status") Integer status,
+                                       @Param("offset") Integer offset,
+                                       @Param("pageSize") Integer pageSize);
+
+    long countBooks(@Param("keyword") String keyword, @Param("status") Integer status);
+
     BookDetailVO selectBookById(@Param("bookId") Integer bookId);
 
     int insertBook(Book book);

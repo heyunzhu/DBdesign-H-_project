@@ -16,8 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -29,9 +27,14 @@ public class UserController {
     }
 
     @GetMapping
-    public ApiResponse<List<UserVO>> listUsers(@RequestParam(required = false) String keyword,
-                                               @RequestParam(required = false) Integer roleId,
-                                               @RequestParam(required = false) Integer status) {
+    public ApiResponse<?> listUsers(@RequestParam(required = false) String keyword,
+                                    @RequestParam(required = false) Integer roleId,
+                                    @RequestParam(required = false) Integer status,
+                                    @RequestParam(required = false) Integer page,
+                                    @RequestParam(required = false) Integer pageSize) {
+        if (page != null || pageSize != null) {
+            return ApiResponse.success(userService.listUsersPage(keyword, roleId, status, page, pageSize));
+        }
         return ApiResponse.success(userService.listUsers(keyword, roleId, status));
     }
 

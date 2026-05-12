@@ -12,6 +12,16 @@ public interface UserMapper {
                              @Param("roleId") Integer roleId,
                              @Param("status") Integer status);
 
+    List<UserVO> selectUsersPage(@Param("keyword") String keyword,
+                                 @Param("roleId") Integer roleId,
+                                 @Param("status") Integer status,
+                                 @Param("offset") Integer offset,
+                                 @Param("pageSize") Integer pageSize);
+
+    long countUsers(@Param("keyword") String keyword,
+                    @Param("roleId") Integer roleId,
+                    @Param("status") Integer status);
+
     UserVO selectUserById(@Param("userId") Integer userId);
 
     SysUser selectUserEntityById(@Param("userId") Integer userId);

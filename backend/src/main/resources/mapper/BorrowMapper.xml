@@ -42,6 +42,57 @@
         ORDER BY br.borrow_time DESC, br.borrow_id DESC
     </select>
 
+    <select id="selectBorrowRecordsPage" resultType="com.example.library.vo.BorrowRecordVO">
+        SELECT
+            br.borrow_id,
+            br.user_id,
+            u.user_no,
+            u.user_name,
+            br.book_id,
+            b.book_name,
+            b.isbn,
+            br.borrow_time,
+            br.due_return_time,
+            br.actual_return_time,
+            br.borrow_status,
+            CASE br.borrow_status
+                WHEN 0 THEN 'not_returned'
+                WHEN 1 THEN 'returned'
+                WHEN 2 THEN 'overdue'
+            END AS borrow_status_text,
+            CASE
+                WHEN br.actual_return_time IS NULL AND br.due_return_time &lt; CURRENT_TIMESTAMP
+                THEN DATEDIFF(CURRENT_DATE, DATE(br.due_return_time))
+                ELSE 0
+            END AS overdue_days
+        FROM borrow_record br
+        JOIN sys_user u ON br.user_id = u.user_id
+        JOIN book b ON br.book_id = b.book_id
+        <where>
+            <if test="userId != null">
+                AND br.user_id = #{userId}
+            </if>
+            <if test="status != null">
+                AND br.borrow_status = #{status}
+            </if>
+        </where>
+        ORDER BY br.borrow_time DESC, br.borrow_id DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countBorrowRecords" resultType="long">
+        SELECT COUNT(*)
+        FROM borrow_record br
+        <where>
+            <if test="userId != null">
+                AND br.user_id = #{userId}
+            </if>
+            <if test="status != null">
+                AND br.borrow_status = #{status}
+            </if>
+        </where>
+    </select>
+
     <select id="selectBorrowRecordById" resultType="com.example.library.entity.BorrowRecord">
         SELECT
             borrow_id,

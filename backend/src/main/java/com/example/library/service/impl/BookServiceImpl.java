@@ -7,6 +7,7 @@ import com.example.library.entity.Book;
 import com.example.library.mapper.BookMapper;
 import com.example.library.service.BookService;
 import com.example.library.vo.BookDetailVO;
+import com.example.library.vo.PageResult;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,6 +26,16 @@ public class BookServiceImpl implements BookService {
     @Override
     public List<BookDetailVO> listBooks(String keyword, Integer status) {
         return bookMapper.selectBooks(keyword, status);
+    }
+
+    @Override
+    public PageResult<BookDetailVO> listBooksPage(String keyword, Integer status, Integer page, Integer pageSize) {
+        int safePage = normalizePage(page);
+        int safePageSize = normalizePageSize(pageSize);
+        int offset = (safePage - 1) * safePageSize;
+        long total = bookMapper.countBooks(keyword, status);
+        List<BookDetailVO> records = bookMapper.selectBooksPage(keyword, status, offset, safePageSize);
+        return new PageResult<>(safePage, safePageSize, total, records);
     }
 
     @Override
@@ -70,5 +81,16 @@ public class BookServiceImpl implements BookService {
     public void disableBook(Integer bookId) {
         getBook(bookId);
         bookMapper.updateBookStatus(bookId, BOOK_STATUS_DISABLED);
+    }
+
+    private int normalizePage(Integer page) {
+        return page == null || page < 1 ? 1 : page;
+    }
+
+    private int normalizePageSize(Integer pageSize) {
+        if (pageSize == null || pageSize < 1) {
+            return 10;
+        }
+        return Math.min(pageSize, 100);
     }
 }

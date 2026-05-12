@@ -10,6 +10,7 @@ import com.example.library.mapper.UserMapper;
 import com.example.library.service.BorrowService;
 import com.example.library.vo.BookDetailVO;
 import com.example.library.vo.BorrowRecordVO;
+import com.example.library.vo.PageResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,16 @@ public class BorrowServiceImpl implements BorrowService {
     @Override
     public List<BorrowRecordVO> listBorrowRecords(Integer userId, Integer status) {
         return borrowMapper.selectBorrowRecords(userId, status);
+    }
+
+    @Override
+    public PageResult<BorrowRecordVO> listBorrowRecordsPage(Integer userId, Integer status, Integer page, Integer pageSize) {
+        int safePage = normalizePage(page);
+        int safePageSize = normalizePageSize(pageSize);
+        int offset = (safePage - 1) * safePageSize;
+        long total = borrowMapper.countBorrowRecords(userId, status);
+        List<BorrowRecordVO> records = borrowMapper.selectBorrowRecordsPage(userId, status, offset, safePageSize);
+        return new PageResult<>(safePage, safePageSize, total, records);
     }
 
     @Override
@@ -91,5 +102,16 @@ public class BorrowServiceImpl implements BorrowService {
 
         borrowMapper.returnBorrowRecord(borrowId, LocalDateTime.now());
         bookMapper.updateBookStatus(borrowRecord.getBookId(), BOOK_STATUS_AVAILABLE);
+    }
+
+    private int normalizePage(Integer page) {
+        return page == null || page < 1 ? 1 : page;
+    }
+
+    private int normalizePageSize(Integer pageSize) {
+        if (pageSize == null || pageSize < 1) {
+            return 10;
+        }
+        return Math.min(pageSize, 100);
     }
 }

@@ -14,8 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/borrows")
 public class BorrowController {
@@ -27,8 +25,13 @@ public class BorrowController {
     }
 
     @GetMapping
-    public ApiResponse<List<BorrowRecordVO>> listBorrowRecords(@RequestParam(required = false) Integer userId,
-                                                               @RequestParam(required = false) Integer status) {
+    public ApiResponse<?> listBorrowRecords(@RequestParam(required = false) Integer userId,
+                                            @RequestParam(required = false) Integer status,
+                                            @RequestParam(required = false) Integer page,
+                                            @RequestParam(required = false) Integer pageSize) {
+        if (page != null || pageSize != null) {
+            return ApiResponse.success(borrowService.listBorrowRecordsPage(userId, status, page, pageSize));
+        }
         return ApiResponse.success(borrowService.listBorrowRecords(userId, status));
     }
 

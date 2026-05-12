@@ -3,6 +3,7 @@ package com.example.library.service;
 import com.example.library.dto.UserCreateRequest;
 import com.example.library.dto.UserStatusUpdateRequest;
 import com.example.library.dto.UserUpdateRequest;
+import com.example.library.vo.PageResult;
 import com.example.library.vo.UserVO;
 
 import java.util.List;
@@ -10,6 +11,8 @@ import java.util.List;
 public interface UserService {
 
     List<UserVO> listUsers(String keyword, Integer roleId, Integer status);
+
+    PageResult<UserVO> listUsersPage(String keyword, Integer roleId, Integer status, Integer page, Integer pageSize);
 
     UserVO getUser(Integer userId);
 

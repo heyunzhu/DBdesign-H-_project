@@ -7,6 +7,7 @@ import com.example.library.dto.UserUpdateRequest;
 import com.example.library.entity.SysUser;
 import com.example.library.mapper.UserMapper;
 import com.example.library.service.UserService;
+import com.example.library.vo.PageResult;
 import com.example.library.vo.UserVO;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +25,16 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserVO> listUsers(String keyword, Integer roleId, Integer status) {
         return userMapper.selectUsers(keyword, roleId, status);
+    }
+
+    @Override
+    public PageResult<UserVO> listUsersPage(String keyword, Integer roleId, Integer status, Integer page, Integer pageSize) {
+        int safePage = normalizePage(page);
+        int safePageSize = normalizePageSize(pageSize);
+        int offset = (safePage - 1) * safePageSize;
+        long total = userMapper.countUsers(keyword, roleId, status);
+        List<UserVO> records = userMapper.selectUsersPage(keyword, roleId, status, offset, safePageSize);
+        return new PageResult<>(safePage, safePageSize, total, records);
     }
 
     @Override
@@ -66,5 +77,16 @@ public class UserServiceImpl implements UserService {
     public void updateUserStatus(Integer userId, UserStatusUpdateRequest request) {
         getUser(userId);
         userMapper.updateUserStatus(userId, request.getAccountStatus());
+    }
+
+    private int normalizePage(Integer page) {
+        return page == null || page < 1 ? 1 : page;
+    }
+
+    private int normalizePageSize(Integer pageSize) {
+        if (pageSize == null || pageSize < 1) {
+            return 10;
+        }
+        return Math.min(pageSize, 100);
     }
 }

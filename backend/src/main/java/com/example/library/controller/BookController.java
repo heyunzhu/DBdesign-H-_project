@@ -16,8 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/books")
 public class BookController {
@@ -29,8 +27,13 @@ public class BookController {
     }
 
     @GetMapping
-    public ApiResponse<List<BookDetailVO>> listBooks(@RequestParam(required = false) String keyword,
-                                                     @RequestParam(required = false) Integer status) {
+    public ApiResponse<?> listBooks(@RequestParam(required = false) String keyword,
+                                    @RequestParam(required = false) Integer status,
+                                    @RequestParam(required = false) Integer page,
+                                    @RequestParam(required = false) Integer pageSize) {
+        if (page != null || pageSize != null) {
+            return ApiResponse.success(bookService.listBooksPage(keyword, status, page, pageSize));
+        }
         return ApiResponse.success(bookService.listBooks(keyword, status));
     }
 
