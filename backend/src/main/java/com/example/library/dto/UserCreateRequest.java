@@ -11,6 +11,9 @@ public class UserCreateRequest {
     @NotBlank(message = "userName cannot be blank")
     private String userName;
 
+    @NotBlank(message = "password cannot be blank")
+    private String password;
+
     private String phone;
     private String deptName;
 
@@ -31,6 +34,14 @@ public class UserCreateRequest {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getPhone() {

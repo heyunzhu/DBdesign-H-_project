@@ -1,5 +1,6 @@
 USE library;
 
+DROP TABLE IF EXISTS agent_operation_log;
 DROP TABLE IF EXISTS borrow_record;
 DROP TABLE IF EXISTS book;
 DROP TABLE IF EXISTS book_type;
@@ -27,6 +28,7 @@ CREATE TABLE sys_user (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
     user_no VARCHAR(20) NOT NULL UNIQUE,
     user_name VARCHAR(50) NOT NULL,
+    password_hash VARCHAR(64) NOT NULL DEFAULT '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92',
     phone VARCHAR(20),
     dept_name VARCHAR(100),
     register_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -108,4 +110,29 @@ CREATE TABLE borrow_record (
             OR
             (borrow_status = 1 AND actual_return_time IS NOT NULL AND actual_return_time >= borrow_time)
         )
+);
+
+CREATE TABLE agent_operation_log (
+    log_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    action_type VARCHAR(30) NOT NULL,
+    target_book_id INT,
+    target_borrow_id INT,
+    user_message VARCHAR(1000),
+    tool_name VARCHAR(80) NOT NULL,
+    tool_arguments VARCHAR(1000),
+    result_success TINYINT NOT NULL,
+    result_message VARCHAR(500),
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_agent_log_user
+        FOREIGN KEY (user_id) REFERENCES sys_user(user_id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_agent_log_book
+        FOREIGN KEY (target_book_id) REFERENCES book(book_id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_agent_log_borrow
+        FOREIGN KEY (target_borrow_id) REFERENCES borrow_record(borrow_id)
+        ON DELETE SET NULL,
+    CONSTRAINT chk_agent_log_success
+        CHECK (result_success IN (0, 1))
 );

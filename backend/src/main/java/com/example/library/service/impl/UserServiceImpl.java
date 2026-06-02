@@ -1,6 +1,7 @@
 package com.example.library.service.impl;
 
 import com.example.library.common.BusinessException;
+import com.example.library.auth.PasswordUtil;
 import com.example.library.dto.UserCreateRequest;
 import com.example.library.dto.UserStatusUpdateRequest;
 import com.example.library.dto.UserUpdateRequest;
@@ -53,6 +54,7 @@ public class UserServiceImpl implements UserService {
         user.setUserName(request.getUserName());
         user.setPhone(request.getPhone());
         user.setDeptName(request.getDeptName());
+        user.setPasswordHash(PasswordUtil.sha256(request.getPassword()));
         user.setAccountStatus(1);
         user.setRoleId(request.getRoleId());
         userMapper.insertUser(user);
@@ -68,6 +70,9 @@ public class UserServiceImpl implements UserService {
         user.setUserName(request.getUserName());
         user.setPhone(request.getPhone());
         user.setDeptName(request.getDeptName());
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            user.setPasswordHash(PasswordUtil.sha256(request.getPassword()));
+        }
         user.setAccountStatus(request.getAccountStatus());
         user.setRoleId(request.getRoleId());
         userMapper.updateUser(user);

@@ -19,7 +19,11 @@ Run the SQL files in this order:
 
 The default database configuration uses MySQL 8.0 on port `3307`.
 
-Before starting the backend, edit `src/main/resources/application.yml` and set your local MySQL password.
+Before starting the backend, set your local MySQL password through an environment variable:
+
+```powershell
+$env:DB_PASSWORD="your-mysql-password"
+```
 
 ## Run
 
@@ -30,11 +34,11 @@ mvn spring-boot:run
 Health check:
 
 ```text
-GET http://localhost:8080/api/health
+GET http://localhost:8081/api/health
 ```
 
 Book list:
 
 ```text
-GET http://localhost:8080/api/books
+GET http://localhost:8081/api/books
 ```

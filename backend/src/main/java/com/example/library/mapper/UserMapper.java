@@ -26,6 +26,8 @@ public interface UserMapper {
 
     SysUser selectUserEntityById(@Param("userId") Integer userId);
 
+    SysUser selectUserEntityByUserNo(@Param("userNo") String userNo);
+
     int insertUser(SysUser user);
 
     int updateUser(SysUser user);

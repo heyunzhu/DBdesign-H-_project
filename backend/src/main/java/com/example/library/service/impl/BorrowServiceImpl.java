@@ -1,5 +1,7 @@
 package com.example.library.service.impl;
 
+import com.example.library.auth.AuthContext;
+import com.example.library.auth.LoginUser;
 import com.example.library.common.BusinessException;
 import com.example.library.dto.BorrowCreateRequest;
 import com.example.library.entity.BorrowRecord;
@@ -26,6 +28,7 @@ public class BorrowServiceImpl implements BorrowService {
     private static final Integer BORROW_STATUS_NOT_RETURNED = 0;
     private static final Integer BORROW_STATUS_RETURNED = 1;
     private static final Integer BORROW_STATUS_OVERDUE = 2;
+    private static final Integer ROLE_READER = 1;
 
     private final BorrowMapper borrowMapper;
     private final UserMapper userMapper;
@@ -39,7 +42,7 @@ public class BorrowServiceImpl implements BorrowService {
 
     @Override
     public List<BorrowRecordVO> listBorrowRecords(Integer userId, Integer status) {
-        return borrowMapper.selectBorrowRecords(userId, status);
+        return borrowMapper.selectBorrowRecords(resolveReadableUserId(userId), status);
     }
 
     @Override
@@ -47,15 +50,17 @@ public class BorrowServiceImpl implements BorrowService {
         int safePage = normalizePage(page);
         int safePageSize = normalizePageSize(pageSize);
         int offset = (safePage - 1) * safePageSize;
-        long total = borrowMapper.countBorrowRecords(userId, status);
-        List<BorrowRecordVO> records = borrowMapper.selectBorrowRecordsPage(userId, status, offset, safePageSize);
+        Integer readableUserId = resolveReadableUserId(userId);
+        long total = borrowMapper.countBorrowRecords(readableUserId, status);
+        List<BorrowRecordVO> records = borrowMapper.selectBorrowRecordsPage(readableUserId, status, offset, safePageSize);
         return new PageResult<>(safePage, safePageSize, total, records);
     }
 
     @Override
     @Transactional
-    public void borrowBook(BorrowCreateRequest request) {
-        SysUser user = userMapper.selectUserEntityById(request.getUserId());
+    public Integer borrowBook(BorrowCreateRequest request) {
+        Integer borrowerId = resolveBorrowerId(request.getUserId());
+        SysUser user = userMapper.selectUserEntityById(borrowerId);
         if (user == null) {
             throw new BusinessException("user not found");
         }
@@ -78,7 +83,7 @@ public class BorrowServiceImpl implements BorrowService {
         }
 
         BorrowRecord borrowRecord = new BorrowRecord();
-        borrowRecord.setUserId(request.getUserId());
+        borrowRecord.setUserId(borrowerId);
         borrowRecord.setBookId(request.getBookId());
         borrowRecord.setBorrowTime(now);
         borrowRecord.setDueReturnTime(dueReturnTime);
@@ -86,6 +91,7 @@ public class BorrowServiceImpl implements BorrowService {
 
         borrowMapper.insertBorrowRecord(borrowRecord);
         bookMapper.updateBookStatus(request.getBookId(), BOOK_STATUS_BORROWED);
+        return borrowRecord.getBorrowId();
     }
 
     @Override
@@ -93,6 +99,10 @@ public class BorrowServiceImpl implements BorrowService {
     public void returnBook(Integer borrowId) {
         BorrowRecord borrowRecord = borrowMapper.selectBorrowRecordById(borrowId);
         if (borrowRecord == null) {
+            throw new BusinessException("borrow record not found");
+        }
+        LoginUser loginUser = AuthContext.get();
+        if (isReader(loginUser) && !loginUser.getUserId().equals(borrowRecord.getUserId())) {
             throw new BusinessException("borrow record not found");
         }
         Integer status = borrowRecord.getBorrowStatus();
@@ -113,5 +123,25 @@ public class BorrowServiceImpl implements BorrowService {
             return 10;
         }
         return Math.min(pageSize, 100);
+    }
+
+    private Integer resolveReadableUserId(Integer requestedUserId) {
+        LoginUser loginUser = AuthContext.get();
+        if (isReader(loginUser)) {
+            return loginUser.getUserId();
+        }
+        return requestedUserId;
+    }
+
+    private Integer resolveBorrowerId(Integer requestedUserId) {
+        LoginUser loginUser = AuthContext.get();
+        if (isReader(loginUser)) {
+            return loginUser.getUserId();
+        }
+        return requestedUserId;
+    }
+
+    private boolean isReader(LoginUser loginUser) {
+        return loginUser != null && ROLE_READER.equals(loginUser.getRoleId());
     }
 }

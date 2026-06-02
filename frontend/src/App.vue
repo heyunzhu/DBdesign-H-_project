@@ -1,5 +1,21 @@
 <template>
-  <div class="app-shell">
+  <div v-if="!currentUser" class="login-screen">
+    <form class="login-card" @submit.prevent="login">
+      <div class="brand login-brand">
+        <span class="brand-mark">L</span>
+        <div>
+          <h1>图书借阅管理</h1>
+          <p>Library Console</p>
+        </div>
+      </div>
+      <label>账号<input v-model.trim="loginForm.userNo" autocomplete="username" required /></label>
+      <label>密码<input v-model="loginForm.password" autocomplete="current-password" type="password" required /></label>
+      <button class="primary-button" type="submit">登录</button>
+      <p class="login-hint">初始演示密码：123456</p>
+    </form>
+  </div>
+
+  <div v-else class="app-shell">
     <aside class="sidebar">
       <div class="brand">
         <span class="brand-mark">L</span>
@@ -30,7 +46,11 @@
           <p class="eyebrow">数据库课程项目</p>
           <h2>{{ currentTitle }}</h2>
         </div>
-        <div class="server-pill">Backend: localhost:8081</div>
+        <div class="topbar-actions">
+          <div class="user-pill">{{ currentUser.userName }} · {{ currentUser.roleName }}</div>
+          <button type="button" @click="logout">退出</button>
+          <div class="server-pill">Backend: localhost:8081</div>
+        </div>
       </header>
 
       <div v-if="message.text" class="toast" :class="message.type">
@@ -68,7 +88,7 @@
                   <th>分类</th>
                   <th>ISBN</th>
                   <th>状态</th>
-                  <th>操作</th>
+                  <th v-if="canManageBooks">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -79,7 +99,7 @@
                   <td>{{ book.typeName }}</td>
                   <td>{{ book.isbn }}</td>
                   <td><span class="status" :class="`book-${book.bookStatus}`">{{ bookStatusText(book.bookStatus) }}</span></td>
-                  <td class="actions">
+                  <td v-if="canManageBooks" class="actions">
                     <button type="button" @click="editBook(book)">编辑</button>
                     <button type="button" @click="disableBook(book.bookId)">下架</button>
                   </td>
@@ -89,7 +109,7 @@
           </div>
         </div>
 
-        <div class="panel">
+        <div v-if="canManageBooks" class="panel">
           <div class="panel-header">
             <div>
               <h3>{{ editingBookId ? '编辑图书' : '新增图书' }}</h3>
@@ -195,6 +215,7 @@
           <form class="form" @submit.prevent="saveUser">
             <label>学号/工号<input v-model.trim="userForm.userNo" required /></label>
             <label>姓名<input v-model.trim="userForm.userName" required /></label>
+            <label>密码<input v-model="userForm.password" :required="!editingUserId" type="password" /></label>
             <label>电话<input v-model.trim="userForm.phone" /></label>
             <label>学院/部门<input v-model.trim="userForm.deptName" /></label>
             <label>角色
@@ -226,12 +247,13 @@
             </div>
           </div>
           <form class="form" @submit.prevent="borrowBook">
-            <label>用户
+            <label v-if="canManageBorrows">用户
               <select v-model.number="borrowForm.userId" required>
                 <option disabled value="">选择用户</option>
                 <option v-for="user in activeUsers" :key="user.userId" :value="user.userId">{{ user.userName }}（{{ user.userNo }}）</option>
               </select>
             </label>
+            <label v-else>用户<input :value="`${currentUser.userName}（${currentUser.userNo}）`" disabled /></label>
             <label>图书
               <select v-model.number="borrowForm.bookId" required>
                 <option disabled value="">选择图书</option>
@@ -266,7 +288,7 @@
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>用户</th>
+                  <th v-if="canManageBorrows">用户</th>
                   <th>图书</th>
                   <th>借阅时间</th>
                   <th>应还时间</th>
@@ -277,7 +299,7 @@
               <tbody>
                 <tr v-for="record in borrowRecords" :key="record.borrowId">
                   <td>{{ record.borrowId }}</td>
-                  <td>{{ record.userName }}</td>
+                  <td v-if="canManageBorrows">{{ record.userName }}</td>
                   <td>{{ record.bookName }}</td>
                   <td>{{ formatTime(record.borrowTime) }}</td>
                   <td>{{ formatTime(record.dueReturnTime) }}</td>
@@ -290,6 +312,104 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <section v-show="activeView === 'agent'" class="agent-layout">
+        <div class="panel agent-panel">
+          <div class="panel-header">
+            <div>
+              <h3>读者借书助手</h3>
+              <p>可以帮你查书、借书、查看和归还自己的借阅记录</p>
+            </div>
+          </div>
+
+          <div class="agent-messages">
+            <div
+              v-for="messageItem in agentMessages"
+              :key="messageItem.id"
+              class="agent-message"
+              :class="messageItem.role"
+            >
+              <template
+                v-for="(block, blockIndex) in formatAgentMessage(messageItem.text)"
+                :key="blockIndex"
+              >
+                <ol v-if="block.type === 'ordered'" class="agent-message-list">
+                  <li v-for="(item, itemIndex) in block.items" :key="itemIndex">
+                    <template
+                      v-for="(segment, segmentIndex) in parseInlineMarkdown(item)"
+                      :key="segmentIndex"
+                    >
+                      <strong v-if="segment.bold">{{ segment.text }}</strong>
+                      <span v-else>{{ segment.text }}</span>
+                    </template>
+                  </li>
+                </ol>
+                <p v-else class="agent-message-paragraph">
+                  <template
+                    v-for="(segment, segmentIndex) in parseInlineMarkdown(block.text)"
+                    :key="segmentIndex"
+                  >
+                    <strong v-if="segment.bold">{{ segment.text }}</strong>
+                    <span v-else>{{ segment.text }}</span>
+                  </template>
+                </p>
+              </template>
+            </div>
+          </div>
+
+          <div v-if="agentBooks.length" class="agent-cards">
+            <div v-for="book in agentBooks" :key="book.bookId" class="agent-card">
+              <strong>{{ book.bookName }}</strong>
+              <span>{{ book.authorName }} / {{ book.isbn }}</span>
+              <span class="status" :class="`book-${book.bookStatus}`">{{ bookStatusText(book.bookStatus) }}</span>
+            </div>
+          </div>
+
+          <div v-if="agentBorrowRecords.length" class="table-wrap agent-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>图书</th>
+                  <th>借阅时间</th>
+                  <th>应还时间</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="record in agentBorrowRecords" :key="record.borrowId">
+                  <td>{{ record.bookName }}</td>
+                  <td>{{ formatTime(record.borrowTime) }}</td>
+                  <td>{{ formatTime(record.dueReturnTime) }}</td>
+                  <td><span class="status" :class="`borrow-${record.borrowStatus}`">{{ borrowStatusText(record.borrowStatus) }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-if="agentActions.length" class="agent-actions">
+            <button
+              v-for="action in agentActions"
+              :key="`${action.type}-${action.bookId || action.borrowId}`"
+              type="button"
+              @click="runAgentAction(action)"
+            >
+              {{ action.label }}
+            </button>
+          </div>
+
+          <form class="agent-input" @submit.prevent="sendAgentMessage">
+            <input
+              v-model.trim="agentInput"
+              :disabled="agentLoading"
+              placeholder="例如：我想借一本数据库相关的书"
+              required
+            />
+            <button class="primary-button" :disabled="agentLoading" type="submit">
+              {{ agentLoading ? '处理中' : '发送' }}
+            </button>
+          </form>
         </div>
       </section>
 
@@ -367,19 +487,30 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { api } from './api'
 
-const navItems = [
+const baseNavItems = [
   { key: 'books', label: '图书管理', icon: 'B' },
   { key: 'users', label: '用户管理', icon: 'U' },
   { key: 'borrows', label: '借阅管理', icon: 'R' },
+  { key: 'agent', label: '借书助手', icon: 'A' },
   { key: 'stats', label: '统计查询', icon: 'S' }
 ]
 
 const activeView = ref('books')
 const message = reactive({ text: '', type: 'success' })
+const currentUser = ref(JSON.parse(localStorage.getItem('library_user') || 'null'))
+const loginForm = reactive({ userNo: 'A2024001', password: '123456' })
 
 const books = ref([])
 const users = ref([])
 const borrowRecords = ref([])
+const agentMessages = ref([
+  { id: 1, role: 'assistant', text: '你好，我是读者借书助手。你可以问我“我想借一本数据库相关的书”或“我现在借了哪些书”。' }
+])
+const agentBooks = ref([])
+const agentBorrowRecords = ref([])
+const agentActions = ref([])
+const agentInput = ref('')
+const agentLoading = ref(false)
 const authors = ref([])
 const bookTypes = ref([])
 const roles = ref([])
@@ -406,6 +537,7 @@ const editingUserId = ref(null)
 const userForm = reactive({
   userNo: '',
   userName: '',
+  password: '',
   phone: '',
   deptName: '',
   roleId: '',
@@ -418,19 +550,35 @@ const borrowForm = reactive({
   dueReturnTime: ''
 })
 
-const currentTitle = computed(() => navItems.find((item) => item.key === activeView.value)?.label || '')
+const navItems = computed(() => {
+  if (!currentUser.value) return []
+  if (currentUser.value.roleId === 3) return baseNavItems.filter((item) => item.key !== 'agent')
+  if (currentUser.value.roleId === 2) return baseNavItems.filter((item) => !['users', 'agent'].includes(item.key))
+  return baseNavItems.filter((item) => ['books', 'borrows', 'agent'].includes(item.key))
+})
+const currentTitle = computed(() => navItems.value.find((item) => item.key === activeView.value)?.label || '')
+const canManageBooks = computed(() => currentUser.value?.roleId === 2 || currentUser.value?.roleId === 3)
+const canManageBorrows = computed(() => currentUser.value?.roleId === 2 || currentUser.value?.roleId === 3)
 const availableBooks = computed(() => books.value.filter((book) => book.bookStatus === 0))
 const activeUsers = computed(() => users.value.filter((user) => user.accountStatus === 1))
 
 watch(activeView, async (view) => {
+  if (!currentUser.value) return
   if (view === 'books') await loadBooks()
   if (view === 'users') await loadUsers()
-  if (view === 'borrows') await Promise.all([loadBooks(), loadUsers(), loadBorrowRecords()])
+  if (view === 'borrows') {
+    const tasks = [loadBooks(), loadBorrowRecords()]
+    if (canManageBorrows.value) tasks.push(loadUsers())
+    await Promise.all(tasks)
+  }
+  if (view === 'agent') await loadBooks()
   if (view === 'stats') await loadStats()
 })
 
 onMounted(async () => {
-  await Promise.all([loadBasicData(), loadBooks(), loadUsers(), loadBorrowRecords(), loadStats()])
+  if (currentUser.value) {
+    await loadInitialData()
+  }
 })
 
 function showMessage(text, type = 'success') {
@@ -458,6 +606,34 @@ async function safeRun(fn, successText) {
   } catch (error) {
     showMessage(error.message, 'error')
   }
+}
+
+async function login() {
+  await safeRun(async () => {
+    const user = await api.post('/auth/login', loginForm)
+    api.setToken(user.token)
+    currentUser.value = user
+    localStorage.setItem('library_user', JSON.stringify(user))
+    activeView.value = navItems.value[0]?.key || 'books'
+    await loadInitialData()
+  }, '登录成功')
+}
+
+async function logout() {
+  await safeRun(async () => {
+    await api.post('/auth/logout', {})
+  })
+  api.clearToken()
+  localStorage.removeItem('library_user')
+  currentUser.value = null
+}
+
+async function loadInitialData() {
+  const tasks = [loadBasicData(), loadBooks(), loadBorrowRecords()]
+  if (currentUser.value?.roleId === 2 || currentUser.value?.roleId === 3) {
+    tasks.push(loadUsers(), loadStats())
+  }
+  await Promise.all(tasks)
 }
 
 async function loadBasicData() {
@@ -544,9 +720,13 @@ async function saveUser() {
     const data = {
       userNo: userForm.userNo,
       userName: userForm.userName,
+      password: userForm.password,
       phone: userForm.phone,
       deptName: userForm.deptName,
       roleId: userForm.roleId
+    }
+    if (editingUserId.value && !data.password) {
+      delete data.password
     }
     if (editingUserId.value) {
       await api.put(`/users/${editingUserId.value}`, { ...data, accountStatus: userForm.accountStatus })
@@ -563,6 +743,7 @@ function editUser(user) {
   Object.assign(userForm, {
     userNo: user.userNo,
     userName: user.userName,
+    password: '',
     phone: user.phone || '',
     deptName: user.deptName || '',
     roleId: user.roleId,
@@ -575,6 +756,7 @@ function resetUserForm() {
   Object.assign(userForm, {
     userNo: '',
     userName: '',
+    password: '',
     phone: '',
     deptName: '',
     roleId: '',
@@ -599,7 +781,7 @@ async function loadBorrowRecords() {
 async function borrowBook() {
   await safeRun(async () => {
     await api.post('/borrows', {
-      userId: borrowForm.userId,
+      userId: canManageBorrows.value ? borrowForm.userId : currentUser.value.userId,
       bookId: borrowForm.bookId,
       dueReturnTime: borrowForm.dueReturnTime || null
     })
@@ -611,8 +793,113 @@ async function borrowBook() {
 async function returnBook(borrowId) {
   await safeRun(async () => {
     await api.put(`/borrows/${borrowId}/return`)
-    await Promise.all([loadBooks(), loadBorrowRecords(), loadStats()])
+    const tasks = [loadBooks(), loadBorrowRecords()]
+    if (canManageBorrows.value) tasks.push(loadStats())
+    await Promise.all(tasks)
   }, '归还办理成功')
+}
+
+async function sendAgentMessage() {
+  const text = agentInput.value
+  if (!text) return
+  agentMessages.value.push({ id: Date.now(), role: 'user', text })
+  agentInput.value = ''
+  agentLoading.value = true
+  try {
+    const response = await api.post('/reader-agent/chat', { message: text })
+    applyAgentResponse(response)
+  } catch (error) {
+    agentMessages.value.push({ id: Date.now() + 1, role: 'assistant', text: error.message })
+  } finally {
+    agentLoading.value = false
+  }
+}
+
+async function runAgentAction(action) {
+  if (action.type === 'borrow') {
+    agentInput.value = `帮我借《${action.query || action.label.replace('借阅《', '').replace('》', '')}》`
+    await sendAgentMessage()
+  }
+  if (action.type === 'return') {
+    agentInput.value = `帮我归还《${action.query || action.label.replace('归还《', '').replace('》', '')}》`
+    await sendAgentMessage()
+  }
+  await Promise.all([loadBooks(), loadBorrowRecords()])
+}
+
+function applyAgentResponse(response) {
+  agentMessages.value.push({
+    id: Date.now() + 2,
+    role: 'assistant',
+    text: response?.reply || '我已经处理好了。'
+  })
+  agentBooks.value = response?.books || []
+  agentBorrowRecords.value = response?.borrowRecords || []
+  agentActions.value = response?.actions || []
+}
+
+function normalizeAgentText(text) {
+  return String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/([。！？；])\s+(?=\d+[.、]\s+)/g, '$1\n')
+    .replace(/\s+(?=\d+[.、]\s+)/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+function formatAgentMessage(text) {
+  const normalized = normalizeAgentText(text)
+  if (!normalized) return [{ type: 'paragraph', text: '' }]
+
+  const blocks = []
+  const listItems = []
+
+  function flushList() {
+    if (listItems.length) {
+      blocks.push({ type: 'ordered', items: [...listItems] })
+      listItems.length = 0
+    }
+  }
+
+  normalized
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line) => {
+      const listMatch = line.match(/^\d+[.、]\s+(.+)$/)
+      if (listMatch) {
+        listItems.push(listMatch[1])
+        return
+      }
+      flushList()
+      blocks.push({ type: 'paragraph', text: line })
+    })
+
+  flushList()
+  return blocks
+}
+
+function parseInlineMarkdown(text) {
+  const value = String(text || '')
+  const segments = []
+  const pattern = /\*\*([^*]+)\*\*/g
+  let lastIndex = 0
+  let match
+
+  while ((match = pattern.exec(value)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ text: value.slice(lastIndex, match.index), bold: false })
+    }
+    segments.push({ text: match[1], bold: true })
+    lastIndex = pattern.lastIndex
+  }
+
+  if (lastIndex < value.length) {
+    segments.push({ text: value.slice(lastIndex), bold: false })
+  }
+
+  return segments.length ? segments : [{ text: value, bold: false }]
 }
 
 async function loadStats() {

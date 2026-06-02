@@ -9,6 +9,7 @@ public class SysUser {
     private String userName;
     private String phone;
     private String deptName;
+    private String passwordHash;
     private LocalDateTime registerTime;
     private Integer accountStatus;
     private Integer roleId;
@@ -51,6 +52,14 @@ public class SysUser {
 
     public void setDeptName(String deptName) {
         this.deptName = deptName;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 
     public LocalDateTime getRegisterTime() {

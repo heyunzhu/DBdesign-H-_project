@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.library.mapper.AgentOperationLogMapper">
+
+    <insert id="insertAgentOperationLog" parameterType="com.example.library.entity.AgentOperationLog">
+        INSERT INTO agent_operation_log (
+            user_id,
+            action_type,
+            target_book_id,
+            target_borrow_id,
+            user_message,
+            tool_name,
+            tool_arguments,
+            result_success,
+            result_message
+        ) VALUES (
+            #{userId},
+            #{actionType},
+            #{targetBookId},
+            #{targetBorrowId},
+            #{userMessage},
+            #{toolName},
+            #{toolArguments},
+            #{resultSuccess},
+            #{resultMessage}
+        )
+    </insert>
+</mapper>

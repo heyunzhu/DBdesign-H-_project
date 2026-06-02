@@ -12,7 +12,7 @@ public interface BorrowService {
 
     PageResult<BorrowRecordVO> listBorrowRecordsPage(Integer userId, Integer status, Integer page, Integer pageSize);
 
-    void borrowBook(BorrowCreateRequest request);
+    Integer borrowBook(BorrowCreateRequest request);
 
     void returnBook(Integer borrowId);
 }
