@@ -10,16 +10,8 @@ USE library;
 -- composite indexes used by frequent business queries.
 -- ============================================================
 
--- User management: filter by role + account_status, paginate by user_id.
-CREATE INDEX idx_sys_user_role_status_id
-ON sys_user(role_id, account_status, user_id);
-
 -- Login uses sys_user.user_no, which is already covered by the UNIQUE index
 -- created in schema.sql. Do not create another duplicate index for it.
-
--- Book list: filter by status, paginate by book_id.
-CREATE INDEX idx_book_status_id
-ON book(book_status, book_id);
 
 -- Book category statistics and category filtering.
 CREATE INDEX idx_book_type_status
